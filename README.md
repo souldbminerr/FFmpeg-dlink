@@ -1,3 +1,6 @@
+# dlink-mod
+Dynamic linking via libnx-dlink
+
 FFmpeg README
 =============
 
