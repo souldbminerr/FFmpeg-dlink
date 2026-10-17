@@ -1,6 +1,13 @@
 TOP := $(CURDIR)
-FFPREFIX ?= $(TOP)/../../qlaunch-ext/extern/ffmpeg-install
-DLINK ?= $(TOP)/../../qlaunch-ext/extern/libnx-dlink
+
+ifeq ($(filter clean,$(MAKECMDGOALS)),)
+ifndef FFPREFIX
+$(error FFPREFIX is not set - pass FFPREFIX=<ffmpeg install prefix>)
+endif
+ifndef DLINK
+$(error DLINK is not set - pass DLINK=<libnx-dlink checkout>)
+endif
+endif
 
 DEVKITPRO ?= /opt/devkitpro
 DKA64 := $(DEVKITPRO)/devkitA64
