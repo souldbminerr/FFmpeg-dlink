@@ -61,19 +61,19 @@ static const uint8_t bitstream_end_sequence[16] = {
 static int nvtegra_h264_decode_uninit(AVCodecContext *avctx) {
     NVTegraH264DecodeContext *ctx = avctx->internal->hwaccel_priv_data;
 
-    int err, ret = 0;
+    int err;
 
     av_log(avctx, AV_LOG_DEBUG, "Deinitializing NVTEGRA H264 decoder\n");
 
     err = av_nvtegra_map_destroy(&ctx->common_map);
     if (err < 0)
-        ret = err;
+        return err;
 
     err = ff_nvtegra_decode_uninit(avctx, &ctx->core);
     if (err < 0)
-        ret = err;
+        return err;
 
-    return ret;
+    return 0;
 }
 
 static int nvtegra_h264_decode_init(AVCodecContext *avctx) {

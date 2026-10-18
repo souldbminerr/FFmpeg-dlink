@@ -138,30 +138,6 @@ static int nvtegra_channel_set_freq(AVNVTegraChannel *channel, uint32_t freq) {
     return 0;
 }
 
-static int nvtegra_channel_get_freq(AVNVTegraChannel *channel, uint32_t *freq) {
-#ifndef __SWITCH__
-    return av_nvtegra_channel_get_clock_rate(channel, channel->module_id, freq);
-#else
-    return AVERROR(mmuRequestGet(&channel->mmu_request, freq));
-#endif
-}
-
-static void nvtegra_channel_restore_clocks(AVHWDeviceContext *ctx, AVNVTegraChannel *channel) {
-    int err;
-
-    if (channel->clock_users <= 0)
-        return;
-
-    av_log(ctx, AV_LOG_WARNING, "Channel still boosted by %d session(s), restoring %u Hz\n",
-           channel->clock_users, channel->saved_clock);
-
-    err = nvtegra_channel_set_freq(channel, channel->saved_clock);
-    if (err < 0)
-        av_log(ctx, AV_LOG_WARNING, "Failed to restore channel clocks: %d\n", err);
-
-    channel->clock_users = 0;
-}
-
 static void nvtegra_device_uninit(AVHWDeviceContext *ctx) {
     NVTegraDevicePriv       *priv = ctx->hwctx;
     AVNVTegraDeviceContext *hwctx = &priv->p;
@@ -171,7 +147,6 @@ static void nvtegra_device_uninit(AVHWDeviceContext *ctx) {
     av_nvtegra_job_pool_uninit(&priv->job_pool);
 
     if (hwctx->nvdec_version) {
-        nvtegra_channel_restore_clocks(ctx, &hwctx->nvdec_channel);
         av_nvtegra_channel_close(&hwctx->nvdec_channel);
 #ifdef __SWITCH__
         mmuRequestFinalize(&hwctx->nvdec_channel.mmu_request);
@@ -179,7 +154,6 @@ static void nvtegra_device_uninit(AVHWDeviceContext *ctx) {
     }
 
     if (hwctx->nvjpg_version) {
-        nvtegra_channel_restore_clocks(ctx, &hwctx->nvjpg_channel);
         av_nvtegra_channel_close(&hwctx->nvjpg_channel);
 #ifdef __SWITCH__
         mmuRequestFinalize(&hwctx->nvjpg_channel.mmu_request);
@@ -494,18 +468,9 @@ int av_nvtegra_dfs_init(AVHWDeviceContext *ctx, AVNVTegraChannel *channel, int w
      */
     max_freq = (UINT64_C(1)<<32) - 1000 & UINT32_MAX;
 
-    if (channel->clock_users == 0) {
-        if (nvtegra_channel_get_freq(channel, &channel->saved_clock) < 0)
-            channel->saved_clock = 0;
-
-        av_log(ctx, AV_LOG_DEBUG, "DFS: Saving entry clock %u Hz\n", channel->saved_clock);
-    }
-
     err = nvtegra_channel_set_freq(channel, max_freq);
     if (err < 0)
         return err;
-
-    channel->clock_users++;
 
     priv->dfs_decode_cycles_ema = 0.0;
     priv->dfs_bitrate_sum       = 0;
@@ -583,17 +548,7 @@ int av_nvtegra_dfs_update(AVHWDeviceContext *ctx, AVNVTegraChannel *channel, int
 }
 
 int av_nvtegra_dfs_uninit(AVHWDeviceContext *ctx, AVNVTegraChannel *channel) {
-    int err = 0;
-
-    if (!channel || channel->clock_users <= 0)
-        return 0;
-
-    if (--channel->clock_users == 0) {
-        av_log(ctx, AV_LOG_DEBUG, "DFS: Restoring clock to %u Hz\n", channel->saved_clock);
-        err = nvtegra_channel_set_freq(channel, channel->saved_clock);
-    }
-
-    return err;
+    return nvtegra_channel_set_freq(channel, 0);
 }
 
 static int nvtegra_transfer_get_formats(AVHWFramesContext *ctx,

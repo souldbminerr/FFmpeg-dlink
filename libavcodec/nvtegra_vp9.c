@@ -62,19 +62,19 @@ static const uint8_t pmconv[] = { 2, 0, 1, 3, 4, 5, 6, 8, 7, 9 };
 static int nvtegra_vp9_decode_uninit(AVCodecContext *avctx) {
     NVTegraVP9DecodeContext *ctx = avctx->internal->hwaccel_priv_data;
 
-    int err, ret = 0;
+    int err;
 
     av_log(avctx, AV_LOG_DEBUG, "Deinitializing NVTEGRA VP9 decoder\n");
 
     err = av_nvtegra_map_destroy(&ctx->common_map);
     if (err < 0)
-        ret = err;
+        return err;
 
     err = ff_nvtegra_decode_uninit(avctx, &ctx->core);
     if (err < 0)
-        ret = err;
+        return err;
 
-    return ret;
+    return 0;
 }
 
 static int nvtegra_vp9_decode_init(AVCodecContext *avctx) {

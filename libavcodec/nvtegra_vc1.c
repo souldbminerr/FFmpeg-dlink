@@ -55,19 +55,19 @@ static const uint8_t bitstream_end_sequence[] = {
 static int nvtegra_vc1_decode_uninit(AVCodecContext *avctx) {
     NVTegraVC1DecodeContext *ctx = avctx->internal->hwaccel_priv_data;
 
-    int err, ret = 0;
+    int err;
 
     av_log(avctx, AV_LOG_DEBUG, "Deinitializing NVTEGRA VC1 decoder\n");
 
     err = av_nvtegra_map_destroy(&ctx->common_map);
     if (err < 0)
-        ret = err;
+        return err;
 
     err = ff_nvtegra_decode_uninit(avctx, &ctx->core);
     if (err < 0)
-        ret = err;
+        return err;
 
-    return ret;
+    return 0;
 }
 
 static int nvtegra_vc1_decode_init(AVCodecContext *avctx) {

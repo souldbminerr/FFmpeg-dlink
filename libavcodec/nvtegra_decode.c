@@ -123,21 +123,22 @@ fail:
 }
 
 int ff_nvtegra_decode_uninit(AVCodecContext *avctx, FFNVTegraDecodeContext *ctx) {
-    (void)avctx;
-
-    /* Restore engine clocks before dropping our device reference, independent
-     * of the hw_frames_ctx lifetime so teardown order cannot leak a boost. */
-    if (ctx->channel && ctx->hw_device_ref) {
-        AVHWDeviceContext *hw_device_ctx = (AVHWDeviceContext *)ctx->hw_device_ref->data;
-
-        av_nvtegra_dfs_uninit(hw_device_ctx, ctx->channel);
-    }
+    AVHWFramesContext *frames_ctx;
+    AVHWDeviceContext *hw_device_ctx;
 
     av_buffer_pool_uninit(&ctx->decoder_pool);
 
     av_buffer_unref(&ctx->hw_device_ref);
 
     av_nvtegra_cmdbuf_deinit(&ctx->cmdbuf);
+
+    if (avctx->hw_frames_ctx) {
+        frames_ctx    = (AVHWFramesContext *)avctx->hw_frames_ctx->data;
+        hw_device_ctx = (AVHWDeviceContext *)frames_ctx->device_ref->data;
+
+        av_nvtegra_dfs_uninit(hw_device_ctx, ctx->channel);
+    }
+
 
     return 0;
 }
