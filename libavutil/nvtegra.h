@@ -43,6 +43,9 @@ typedef struct AVNVTegraChannel {
     MmuRequest mmu_request;
 #endif
     uint32_t clock;
+    uint32_t saved_clock;
+    /* Number of active DFS sessions currently boosting this channel. */
+    int clock_users;
 } AVNVTegraChannel;
 
 typedef struct AVNVTegraMap {
